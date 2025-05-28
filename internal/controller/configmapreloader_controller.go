@@ -66,6 +66,10 @@ func (r *ConfigMapReloaderReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if !ok || enabled != "true" {
 			continue
 		}
+		// ensure that deployment has container referencing configmap
+		if !deploymentReferencesConfigMap(deployment, configMap.Name) {
+			continue
+		}
 
 		// trigger rolling restart
 		if deployment.Spec.Template.Annotations == nil {
@@ -91,4 +95,31 @@ func (r *ConfigMapReloaderReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&corev1.ConfigMap{}).
 		Named("configmapreloader").
 		Complete(r)
+}
+
+func deploymentReferencesConfigMap(deployment appsv1.Deployment, configMapName string) bool {
+	// check containers
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		// check `envFrom`
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && envFrom.ConfigMapRef.Name == configMapName {
+				return true
+			}
+		}
+		// check `env`
+		for _, env := range container.Env {
+			if env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil && env.ValueFrom.ConfigMapKeyRef.Name == configMapName {
+				return true
+			}
+		}
+	}
+
+	// check volumes
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && volume.ConfigMap.Name == configMapName {
+			return true
+		}
+	}
+
+	return false
 }
