@@ -42,6 +42,37 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 	)
 
 	Context("When a configmap is updated", func() {
+		AfterEach(func() {
+			ctx := context.Background()
+
+			// Delete ConfigMap
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespaceName,
+				},
+			}
+			_ = k8sClient.Delete(ctx, configMap)
+
+			// Delete other ConfigMap
+			otherConfigMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      otherConfigMapName,
+					Namespace: namespaceName,
+				},
+			}
+			_ = k8sClient.Delete(ctx, otherConfigMap)
+
+			// Delete Deployment
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deploymentName,
+					Namespace: namespaceName,
+				},
+			}
+			_ = k8sClient.Delete(ctx, deployment)
+		})
+
 		It("should update a deployment with a reloader annotation", func() {
 			ctx := context.Background()
 
