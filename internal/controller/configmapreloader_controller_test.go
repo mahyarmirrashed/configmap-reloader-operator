@@ -38,6 +38,8 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 		deploymentName     = "test-deployment"
 		namespaceName      = "default"
 
+		newValue = "new-value"
+
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
 	)
@@ -135,7 +137,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
 			// update configmap
-			updatedConfigMap.Data["key"] = "new-value"
+			updatedConfigMap.Data["key"] = newValue
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
 			// Reconcile configmap
@@ -215,7 +217,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
 			// update configmap
-			updatedConfigMap.Data["key"] = "new-value"
+			updatedConfigMap.Data["key"] = newValue
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
 			// Reconcile configmap
@@ -309,7 +311,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
 			// update configmap
-			updatedConfigMap.Data["key"] = "new-value"
+			updatedConfigMap.Data["key"] = newValue
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
 			// Reconcile configmap
