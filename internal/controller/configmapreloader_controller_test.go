@@ -33,9 +33,10 @@ import (
 
 var _ = Describe("ConfigMapReloader Controller", func() {
 	const (
-		configMapName  = "test-configmap"
-		deploymentName = "test-deployment"
-		namespaceName  = "default"
+		configMapName      = "test-configmap"
+		otherConfigMapName = "other" + configMapName
+		deploymentName     = "test-deployment"
+		namespaceName      = "default"
 
 		timeout  = time.Second * 10
 		interval = time.Millisecond * 250
@@ -153,6 +154,86 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 				annotations := updatedDeployment.Spec.Template.Annotations
 				// Ensure that deployment has annotation indicating restart
 				return annotations != nil && annotations["reloader.experiments.k8s.mahyarmirrashed.com/restarted-at"] != ""
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("should not update a deployment without a reloader annotation", func() {
+			ctx := context.Background()
+
+			// Create configmap
+			configMap := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespaceName,
+				},
+				Data: map[string]string{
+					"key": "value",
+				},
+			}
+			Expect(k8sClient.Create(ctx, configMap)).To(Succeed())
+
+			// Create deployment
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deploymentName,
+					Namespace: namespaceName,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: ptr.To(int32(1)),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": deploymentName},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{"app": deploymentName},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  "app",
+									Image: "nginx",
+									EnvFrom: []corev1.EnvFromSource{
+										{
+											ConfigMapRef: &corev1.ConfigMapEnvSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: configMapName,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, deployment)).To(Succeed())
+
+			// Simulate configmap update
+			configMapKey := types.NamespacedName{Name: configMapName, Namespace: namespaceName}
+			updatedConfigMap := &corev1.ConfigMap{}
+			/// Grab current configmap
+			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
+			/// Update configmap
+			updatedConfigMap.Data["key"] = "new-value"
+			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
+
+			// Reconcile configmap
+			reconciler := &ConfigMapReloaderReconciler{Client: k8sClient, Scheme: scheme.Scheme}
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: configMapKey})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify deployment was updated
+			updatedDeployment := &appsv1.Deployment{}
+			/// Blocking consistent check to ensure deployment is never updated (with timeout)
+			Consistently(func() bool {
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: namespaceName}, updatedDeployment); err != nil {
+					return false
+				}
+				// Get updated deployment annotations
+				annotations := updatedDeployment.Spec.Template.Annotations
+				// Ensure that deployment has annotation indicating restart
+				return annotations == nil || annotations["reloader.experiments.k8s.mahyarmirrashed.com/restarted-at"] == ""
 			}, timeout, interval).Should(BeTrue())
 		})
 	})
