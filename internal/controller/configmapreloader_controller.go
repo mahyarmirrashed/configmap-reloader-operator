@@ -18,7 +18,11 @@ package controller
 
 import (
 	"context"
+	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,17 +40,47 @@ type ConfigMapReloaderReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ConfigMapReloader object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.2/pkg/reconcile
 func (r *ConfigMapReloaderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var configMap corev1.ConfigMap
+	if err := r.Get(ctx, req.NamespacedName, &configMap); err != nil {
+		if errors.IsNotFound(err) {
+			// NOTE: configmap deleted, nothing to do
+			return ctrl.Result{}, nil
+		}
+
+		logger.Error(err, "failed to get configmap")
+		return ctrl.Result{}, err
+	}
+
+	var deployments appsv1.DeploymentList
+	if err := r.List(ctx, &deployments, client.InNamespace(req.Namespace)); err != nil {
+		logger.Error(err, "failed to list deployments")
+		return ctrl.Result{}, err
+	}
+
+	for _, deployment := range deployments.Items {
+		// check if reloader is enabled
+		enabled, ok := deployment.Annotations["reloader.experiments.k8s.mahyarmirrashed.com/enabled"]
+		if !ok || enabled != "true" {
+			continue
+		}
+
+		// trigger rolling restart
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = make(map[string]string)
+		}
+
+		deployment.Spec.Template.Annotations["reloader.experiments.k8s.mahyarmirrashed.com/restarted-at"] = time.Now().Format(time.RFC3339)
+
+		if err := r.Update(ctx, &deployment); err != nil {
+			logger.Error(err, "failed to update deployment", "name", deployment.Name)
+			return ctrl.Result{}, err
+		}
+
+		logger.Info("triggered restart for deployment", "name", deployment.Name)
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -54,8 +88,7 @@ func (r *ConfigMapReloaderReconciler) Reconcile(ctx context.Context, req ctrl.Re
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConfigMapReloaderReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
+		For(&corev1.ConfigMap{}).
 		Named("configmapreloader").
 		Complete(r)
 }
