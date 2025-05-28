@@ -31,9 +31,8 @@ type ConfigMapReloaderReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=experiments.k8s.mahyarmirrashed.com,resources=configmapreloaders,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=experiments.k8s.mahyarmirrashed.com,resources=configmapreloaders/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=experiments.k8s.mahyarmirrashed.com,resources=configmapreloaders/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
