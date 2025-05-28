@@ -132,9 +132,9 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// Simulate configmap update
 			configMapKey := types.NamespacedName{Name: configMapName, Namespace: namespaceName}
 			updatedConfigMap := &corev1.ConfigMap{}
-			/// Grab current configmap
+			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
-			/// Update configmap
+			// update configmap
 			updatedConfigMap.Data["key"] = "new-value"
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
@@ -145,7 +145,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 
 			// Verify deployment was updated
 			updatedDeployment := &appsv1.Deployment{}
-			/// Blocking check to ensure deployment is updated (with timeout)
+			// blocking check to ensure deployment is updated (with timeout)
 			Eventually(func() bool {
 				if err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: namespaceName}, updatedDeployment); err != nil {
 					return false
@@ -212,9 +212,9 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// Simulate configmap update
 			configMapKey := types.NamespacedName{Name: configMapName, Namespace: namespaceName}
 			updatedConfigMap := &corev1.ConfigMap{}
-			/// Grab current configmap
+			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
-			/// Update configmap
+			// update configmap
 			updatedConfigMap.Data["key"] = "new-value"
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
@@ -225,7 +225,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 
 			// Verify deployment was updated
 			updatedDeployment := &appsv1.Deployment{}
-			/// Blocking consistent check to ensure deployment is never updated (with timeout)
+			// blocking consistent check to ensure deployment is never updated (with timeout)
 			Consistently(func() bool {
 				if err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: namespaceName}, updatedDeployment); err != nil {
 					return false
@@ -306,9 +306,9 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 			// Simulate configmap update
 			configMapKey := types.NamespacedName{Name: otherConfigMapName, Namespace: namespaceName}
 			updatedConfigMap := &corev1.ConfigMap{}
-			/// Grab current configmap
+			// grab current configmap
 			Expect(k8sClient.Get(ctx, configMapKey, updatedConfigMap)).To(Succeed())
-			/// Update configmap
+			// update configmap
 			updatedConfigMap.Data["key"] = "new-value"
 			Expect(k8sClient.Update(ctx, updatedConfigMap)).To(Succeed())
 
@@ -319,7 +319,7 @@ var _ = Describe("ConfigMapReloader Controller", func() {
 
 			// Verify deployment was updated
 			updatedDeployment := &appsv1.Deployment{}
-			/// Blocking consistent check to ensure deployment is never updated (with timeout)
+			// blocking consistent check to ensure deployment is never updated (with timeout)
 			Consistently(func() bool {
 				if err := k8sClient.Get(ctx, types.NamespacedName{Name: deploymentName, Namespace: namespaceName}, updatedDeployment); err != nil {
 					return false
