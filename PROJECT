@@ -7,4 +7,10 @@ layout:
 - go.kubebuilder.io/v4
 projectName: configmap-reloader-operator
 repo: github.com/mahyarmirrashed/configmap-reloader-operator
+resources:
+- controller: true
+  domain: k8s.mahyarmirrashed.com
+  group: experiments
+  kind: ConfigMapReloader
+  version: v1alpha1
 version: "3"
